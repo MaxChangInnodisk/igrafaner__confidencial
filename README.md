@@ -1,4 +1,4 @@
-# inoo-grafaner__confidencial
+# iGrafaner
 The Grafana application with AI inference for Innodisk's Assembly Line.
 
 # Prepare model
