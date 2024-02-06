@@ -19,12 +19,13 @@ The Grafana application with AI inference for Innodisk's Assembly Line.
     ```bash
     docker/build.sh
     ```
-* Setup environment
+* Setup environment - [config.ini](./docker/config.ini)
   ```ini
   [IGRAFANER]
   sample=/path/to/sample_folder
   golden=/path/to/golden_folder
   model=/path/to/onnx_model
+  ...
   ```
 * Run docker container via shell script
   ```bash
@@ -50,7 +51,8 @@ The Grafana application with AI inference for Innodisk's Assembly Line.
     ```
 * Execute with `igra-cli`
     - golden folder should have `golden`, `inference_info.json`.
-    - sample folder shouldn't include `/MAP`
+    - sample folder should include `/MAP`
+    - time format should be `2023-09-02 00:52:10`
     ```bash
     igra-cli \
     --mysql-host=${HOST} \
