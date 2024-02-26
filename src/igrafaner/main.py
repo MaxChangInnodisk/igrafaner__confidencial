@@ -141,7 +141,7 @@ def cli():
             result = model.inference(sample=sc.buffer, golden=gp.buffer)[0]
             if result < float(gp.threshold):
                 pass_comp.append(comp_id)
-                ai_result = "PASS"
+                ai_result = "OK"
             else:
                 ng_comp.append(comp_id)
                 ai_result = "NG"
