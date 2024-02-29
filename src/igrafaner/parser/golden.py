@@ -24,7 +24,8 @@ class GoldenParser:
 
     def __init__(self,
                  root: str,
-                 json_file: str = "inference_info.json") -> None:
+                 json_file: str = "inference_info.json",
+                 panel_file: str = "panel_info.json") -> None:
         """
         Find golden data root and inference_panel_info.json
         """
@@ -35,11 +36,20 @@ class GoldenParser:
         self.json_file = self.root.joinpath(json_file)
         assert self.json_file.exists(), f"json not found. ({self.json_file})"
 
+        self.panel_file = self.root.joinpath(panel_file)
+        assert self.panel_file.exists(), f"panel not found. ({self.panel_file})"
+
         self.data: dict = read_json(self.json_file.__str__())
+        self.panels = read_json(self.panel_file.__str__())
+        print(self.panels)
+        
         self.part_nums = set(self.data.keys())
 
     def check_part_no(self, part_no: str) -> bool:
         return part_no in self.part_nums
+
+    def check_cmodel(self, cmodel: str) -> bool:
+        return cmodel in self.panels
 
     def get_golden(self, part_no: str, light_source: str) -> GoldenComponent:
         """
