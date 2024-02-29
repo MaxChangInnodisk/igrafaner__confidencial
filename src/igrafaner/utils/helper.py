@@ -1,4 +1,18 @@
 import time
+from collections import defaultdict
+
+
+class FailedCompDict(dict):
+
+    def __init__(self):
+        self.types = defaultdict(list)
+        self.count = 0
+
+    def __setitem__(self, uuid: str, info: dict):
+        self.types[info['type']].append(uuid)
+        self.count += 1
+        super().__setitem__(uuid, info)
+
 
 class CountingList(list):
     def __init__(self, *args, **kwargs):
@@ -8,6 +22,7 @@ class CountingList(list):
     def append(self, item):
         super().append(item)
         self.count += 1
+
 
 class StopWatch:
 
