@@ -1,5 +1,4 @@
 import argparse
-import time
 import tqdm
 
 
@@ -56,9 +55,16 @@ def get_args() -> argparse.Namespace:
 
 def cli():
     import igrafaner as igra
+    from collections import Counter
 
     args = get_args()
 
+    # Init StopWatch
+    w_e2e, w_samp, w_gold, w_infer = \
+        [igra.helper.StopWatch() for _ in range(4)]
+    
+    w_e2e.split_start()
+    
     # Get data from mysql
     igra.params.MySQL.host = args.mysql_host
     igra.params.MySQL.port = args.mysql_port
@@ -76,34 +82,41 @@ def cli():
     model = igra.model.OnnxSiamese(model_path=args.model_path)
 
     # Progress log
-    def progress_log(cur, limit, func=print, *args, **kwargs):
+    def print_progress(cur, limit, func=print, *args, **kwargs):
         content = '[IGRA] {:03}% ({:06}/{:06}) PASS: {:06}, NG: {:06}, None: {:06}'.format(
             int((cur/limit)*100), cur, limit, pass_comp.count, ng_comp.count,
             err_gold.count + err_samp.count + err_infer.count)
         func(content, **kwargs)
 
     # Init Custom list
-    err_samp, err_gold, err_infer, ng_comp, pass_comp \
-        = [igra.helper.CountingList() for _ in range(5)]
+    err_cmod, err_samp, err_gold, err_infer, ng_comp, pass_comp \
+        = [igra.helper.FailedCompDict() for _ in range(6)]
 
-    # Init StopWatch
-    w_e2e, w_samp, w_gold, w_infer = \
-        [igra.helper.StopWatch() for _ in range(4)]
+    w_e2e.split_start()
 
     for idx, data in enumerate(mysql_data):
 
-        w_e2e.split_start()
-
-        progress_log(cur=idx, limit=num_mysql_data, func=print, end='\r')
+        print_progress(cur=idx, limit=num_mysql_data, func=print, end='\r')
 
         # Init ai_result
-        pic_path, x1, x2, y1, y2, comp_id, part_no = data
+        pic_path, x1, x2, y1, y2, comp_id, part_no, cmodel = data
+        comp_id = str(comp_id)
         ai_result = "None"
+
+        # Not supported cModel
+        if not golden_parser.check_cmodel(cmodel=cmodel):
+            err_cmod[comp_id] = {
+                "type": igra.error.CModelNotFound.__name__,
+                "message": "Not supported cModel"
+            }
+            continue
 
         # No specific part number ( no golden )
         if not golden_parser.check_part_no(part_no):
-            err_gold.append(igra.error_message(
-                uid=comp_id, message="Unpaired part_no"))
+            err_gold[comp_id] = {
+                "type": igra.error.PartNumberNotFound.__name__,
+                "message": "Unpaired part_no"
+            }
             igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
             continue
 
@@ -117,8 +130,10 @@ def cli():
                 part_no=part_no,
                 mount_folder=args.mount_folder)
         except Exception as e:
-            err_samp.append(igra.error_message(
-                uid=comp_id, message=f"Capture sample failed. ({e})"))
+            err_samp[comp_id] = {
+                "type": type(e).__name__,
+                "message": f"Capture sample failed. ({e})"
+            }
             igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
             continue
         w_samp.split_stop()
@@ -129,8 +144,10 @@ def cli():
             gp = golden_parser.get_golden(
                 part_no=sc.part_no, light_source=sc.light_source)
         except Exception as e:
-            err_gold.append(igra.error_message(
-                uid=comp_id, message=f"Capture golden failed. ({e})"))
+            err_gold[comp_id] = {
+                "type": type(e).__name__,
+                "message": f"Capture golden failed. ({e})"
+            }
             igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
             continue
         w_gold.split_stop()
@@ -145,28 +162,45 @@ def cli():
             else:
                 ng_comp.append(comp_id)
                 ai_result = "NG"
-            igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
 
         except Exception as e:
-            err_infer.append(igra.error_message(
-                uid=comp_id, message=f"Inference failed. ({e})"))
+            err_infer[comp_id] = {
+                "type": type(e).__name__,
+                "message": f"Inference failed. ({e})"
+            }
             igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
             continue
         w_infer.split_stop()
 
-        # Record e2e cost time
-        w_e2e.split_stop()
+        # Write data
+        igra.database.write_ai_result(comp_id=comp_id, ai_result=ai_result)
 
-    progress_log(cur=num_mysql_data, limit=num_mysql_data,
-                 func=print, end='\r')
+    # Record e2e cost time
+    w_e2e.split_stop()
+
+    print_progress(cur=num_mysql_data, limit=num_mysql_data,
+                   func=print, end='\n')
     igra.logger.info('Information')
     igra.logger.info(f'- [ Data ] {num_mysql_data}')
     igra.logger.info(f'- [ Cost ] {w_e2e.total:.03f}s')
     igra.logger.info('AI Results')
-    igra.logger.info(f'- [ {"PASS":<4} ] {pass_comp.count}')
+    igra.logger.info(f'- [ {"OK":<4} ] {pass_comp.count}')
     igra.logger.info(f'- [ {"NG":<4} ] {ng_comp.count}')
     igra.logger.info(
         f'- [ {"None":<4} ] {err_gold.count+err_samp.count+err_infer.count} ( SampleErr: {err_samp.count}, GoldenErr: {err_gold.count}, InferErr: {err_infer.count})')
+
+    igra.logger.info('Error Message')
+    igra.logger.info(f'cModel')
+    for err_type_name, err_type_uids in err_cmod.types.items():
+        igra.logger.info(f'- [{err_type_name}] {len(err_type_uids)}')
+
+    igra.logger.info(f'Sample')
+    for err_type_name, err_type_uids in err_samp.types.items():
+        igra.logger.info(f'- [{err_type_name}] {len(err_type_uids)}')
+
+    igra.logger.info(f'Golden')
+    for err_type_name, err_type_uids in err_gold.types.items():
+        igra.logger.info(f'- [{err_type_name}] {len(err_type_uids)}')
 
     igra.logger.info(f'Inference Throughput ( E2E )')
     igra.logger.info(
