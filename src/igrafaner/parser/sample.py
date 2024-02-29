@@ -41,8 +41,8 @@ class SampleComponent:
                    split_keyword: str
                    ) -> Tuple[str, str]:
 
-        assert Path(mount_folder).exists(), \
-            f"Mount folder is not exists ({mount_folder})"
+        if not Path(mount_folder).exists():
+            raise FileExistsError(f"Mount folder is not exists ({mount_folder})")
 
         # Parse src_path and get dst_path
         infix = split_keyword
@@ -54,8 +54,8 @@ class SampleComponent:
         else:
             dst_path = prefix.joinpath(postfix)
 
-        assert dst_path.exists(), \
-            f"File is not exists ({dst_path})"
+        if not dst_path.exists():
+            raise FileExistsError(f"File is not exists ({dst_path})")
 
         return str(dst_path), Path(postfix).stem.split('_')[-1]
 
