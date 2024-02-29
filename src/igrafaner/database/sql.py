@@ -9,7 +9,7 @@ def get_period_data(start: str, end: str):
     """
     Get the data in period.
 
-    PicPath, X1, X2, Y1, Y2, PK_CompID, PartNo
+    PicPath, X1, X2, Y1, Y2, PK_CompID, PartNo, cModel
     """
 
     [helper.validate_datetime_format(date) for date in (start, end)]
@@ -22,9 +22,9 @@ def get_period_data(start: str, end: str):
     )
     # select PicPath,X1,X2,Y1,Y2,PK_CompID from vUnionTable where fdate>='2024-01-03' and fdate<'2024-01-04'
     sql_query = """\
-        SELECT PicPath, X1, X2, Y1, Y2, PK_CompID, PartNo \
-        FROM vUnionTable \
-        WHERE vUnionTable.fdate BETWEEN %s AND %s"""
+        SELECT PicPath, X1, X2, Y1, Y2, PK_CompID, PartNo, cModel \
+        FROM vUnionTableV2 \
+        WHERE vUnionTableV2.fdate BETWEEN %s AND %s"""
 
     try:
         with conn.cursor() as cursor:
