@@ -41,7 +41,6 @@ class GoldenParser:
 
         self.data: dict = read_json(self.json_file.__str__())
         self.panels = read_json(self.panel_file.__str__())
-        print(self.panels)
         
         self.part_nums = set(self.data.keys())
 
