@@ -1,5 +1,5 @@
 from . import database, model, parser, params
-from .utils import logger, error_message, helper
+from .utils import logger, error, helper
 
 __all__ = [
     "database",
@@ -7,6 +7,6 @@ __all__ = [
     "parser",
     "params",
     "logger",
-    "error_message",
+    "error",
     "helper"
 ]

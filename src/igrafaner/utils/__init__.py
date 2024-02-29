@@ -1,9 +1,9 @@
 from .logger import logger
-from .error import error_message
 from . import helper
+from . import error
 
 __all__ = [
     "logger",
-    "error_message",
-    "helper"
+    "helper",
+    "error"
 ]
