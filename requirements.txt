@@ -10,3 +10,5 @@ packaging==23.2
 protobuf==4.25.2
 sympy==1.12
 tqdm==4.66.1
+pydantic==2.1.1
+
