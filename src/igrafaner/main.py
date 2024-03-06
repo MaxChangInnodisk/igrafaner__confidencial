@@ -1,6 +1,8 @@
 import argparse
 import tqdm
-
+import json
+import pathlib
+import time
 
 def get_args() -> argparse.Namespace:
     """
@@ -189,6 +191,10 @@ def cli():
     igra.logger.info(
         f'- [ {"None":<4} ] {err_gold.count+err_samp.count+err_infer.count} ( SampleErr: {err_samp.count}, GoldenErr: {err_gold.count}, InferErr: {err_infer.count})')
 
+    err_root = pathlib.Path(f'./errors/{str(time.time())}')
+    err_root.mkdir(parents=True, exist_ok=True)
+    
+    
     igra.logger.info('Error Message')
     igra.logger.info(f'cModel')
     for err_type_name, err_type_uids in err_cmod.types.items():
@@ -197,10 +203,15 @@ def cli():
     igra.logger.info(f'Sample')
     for err_type_name, err_type_uids in err_samp.types.items():
         igra.logger.info(f'- [{err_type_name}] {len(err_type_uids)}')
+    with open( err_root / 'sample.json', 'w') as f:
+        f.write(json.dumps(err_samp, indent=4))
 
     igra.logger.info(f'Golden')
     for err_type_name, err_type_uids in err_gold.types.items():
         igra.logger.info(f'- [{err_type_name}] {len(err_type_uids)}')
+    with open( err_root / 'golden.json', 'w') as f:
+        f.write(json.dumps(err_gold, indent=4))
+
 
     igra.logger.info(f'Inference Throughput ( E2E )')
     igra.logger.info(
