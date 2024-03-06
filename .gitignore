@@ -164,3 +164,4 @@ data/
 logs/
 dev-work.md
 model/oi_model.onnx
+errors/
